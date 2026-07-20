@@ -1,5 +1,23 @@
 /* eslint-disable */
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { initializeApp } from "firebase/app";
+import { getDatabase, ref, set, onValue } from "firebase/database";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBr-Vq8kDPrxNv8RojdrPa_GUgXth2tHmg",
+  authDomain: "teamnight-d909b.firebaseapp.com",
+  databaseURL: "https://teamnight-d909b-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "teamnight-d909b",
+  storageBucket: "teamnight-d909b.firebasestorage.app",
+  messagingSenderId: "440378727824",
+  appId: "1:440378727824:web:2c4bf51c6c57f8f7d96715"
+};
+
+let fdb = null;
+try { fdb = getDatabase(initializeApp(firebaseConfig)); } catch (e) {}
+const dbSet = (p, val) => { try { if (fdb) set(ref(fdb, p), val); } catch (e) {} };
+
+const EDIT_PASSWORD = "006"; // 수정 비밀번호
 
 const ZONES = ["상부", "하부", "B", "C", "D", "P", "T", "W", "Z"];
 const ZONE_COLORS = {
@@ -63,6 +81,27 @@ export default function App() {
   const [activeMachine, setActiveMachine] = useState(1);
   const [activeLine, setActiveLine] = useState(1);
   const [copied, setCopied] = useState(false);
+  const [editable, setEditable] = useState(() => {
+    try { return localStorage.getItem("maps_editable") === "true"; } catch (e) { return false; }
+  });
+  const [showPwInput, setShowPwInput] = useState(false);
+  const [pwValue, setPwValue] = useState("");
+
+  const tryUnlock = () => {
+    if (pwValue === EDIT_PASSWORD) {
+      setEditable(true);
+      try { localStorage.setItem("maps_editable", "true"); } catch (e) {}
+      setShowPwInput(false); setPwValue("");
+    } else {
+      setPwValue("");
+    }
+  };
+
+  const lockEdit = () => {
+    setEditable(false);
+    try { localStorage.setItem("maps_editable", "false"); } catch (e) {}
+  };
+
   const [enabledMachines, setEnabledMachines] = useState(() => {
     try { const s = localStorage.getItem("maps_enabled_machines"); if (s) return JSON.parse(s); } catch (e) {}
     return { 1: true, 2: true };
@@ -75,7 +114,7 @@ export default function App() {
   };
   const [resetConfirm, setResetConfirm] = useState(false);
 
-  const saveData = (d) => { setData(d); try { localStorage.setItem("maps_data", JSON.stringify(d)); } catch (e) {} };
+  const saveData = (d) => { if (!editable) return; setData(d); try { localStorage.setItem("maps_data", JSON.stringify(d)); } catch (e) {} dbSet("maps/data", d); };
 
   const toggleNum = (zone, machine, line, type, idx) => {
     const current = data[zone][machine][line][type];
@@ -168,12 +207,32 @@ export default function App() {
     return out;
   }, [data]);
 
+
+  // Firebase 실시간 구독
+  useEffect(() => {
+    if (!fdb) return;
+    const subs = [];
+    subs.push(onValue(ref(fdb, "maps/data"), snap => {
+      const v = snap.val();
+      if (v) {
+        setData(v);
+        try { localStorage.setItem("maps_data", JSON.stringify(v)); } catch (e) {}
+      }
+    }));
+    return () => subs.forEach(u => u());
+  }, []);
+
   const grand = useMemo(() => {
     const total = ZONES.length * MACHINES.reduce((s,m) => s + MACHINE_LINES[m].length * 8, 0);
     const flowDone = ZONES.reduce((s,z) => s+stats[z].flowDone, 0);
     const shelfDone = ZONES.reduce((s,z) => s+stats[z].shelfDone, 0);
     return { flowDone, shelfDone, total, flowPct: Math.round((flowDone/total)*100), shelfPct: Math.round((shelfDone/total)*100), pct: Math.round(((flowDone+shelfDone)/(total*2))*100) };
   }, [stats]);
+
+  // 대시보드용 요약 실시간 전송
+  useEffect(() => {
+    dbSet("summary/maps", { pct: grand.pct, ts: Date.now() });
+  }, [grand.pct]);
 
   const getSummaryText = () => {
     const now = new Date();
@@ -274,6 +333,28 @@ export default function App() {
       <div style={{ textAlign:"center", marginBottom:20 }}>
         <h1 style={{ fontSize:28, fontWeight:900, margin:0, letterSpacing:"0.08em", background:"linear-gradient(135deg,#f59e0b,#ef4444)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>MAPS</h1>
         <div style={{ fontSize:11, letterSpacing:"0.3em", color:S.textSub, textTransform:"uppercase", marginTop:4, fontWeight:500 }}>피킹 진행 현황</div>
+        {/* 잠금 상태 */}
+        <div style={{ marginTop: 10 }}>
+          {editable ? (
+            <button onClick={lockEdit} style={{ fontSize: 11, fontWeight: 700, padding: "5px 16px", borderRadius: 20, cursor: "pointer", background: "#dcfce7", border: "1px solid #86efac", color: "#15803d", fontFamily: "inherit" }}>
+              🔓 수정 가능 · 탭하여 잠금
+            </button>
+          ) : showPwInput ? (
+            <div style={{ display: "flex", gap: 6, justifyContent: "center", alignItems: "center" }}>
+              <input type="password" inputMode="numeric" value={pwValue} autoFocus
+                onChange={e => setPwValue(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && tryUnlock()}
+                placeholder="비밀번호"
+                style={{ width: 100, background: "#fff", border: "1.5px solid #7c3aed", borderRadius: 10, padding: "6px 10px", fontSize: 14, fontWeight: 700, outline: "none", textAlign: "center", fontFamily: "inherit" }} />
+              <button onClick={tryUnlock} style={{ fontSize: 12, fontWeight: 800, padding: "7px 14px", borderRadius: 10, cursor: "pointer", background: "#7c3aed", border: "none", color: "#fff", fontFamily: "inherit" }}>확인</button>
+              <button onClick={() => { setShowPwInput(false); setPwValue(""); }} style={{ fontSize: 12, fontWeight: 700, padding: "7px 10px", borderRadius: 10, cursor: "pointer", background: "#f8fafc", border: "1px solid #e2e8f0", color: "#94a3b8", fontFamily: "inherit" }}>취소</button>
+            </div>
+          ) : (
+            <button onClick={() => setShowPwInput(true)} style={{ fontSize: 11, fontWeight: 700, padding: "5px 16px", borderRadius: 20, cursor: "pointer", background: "#f8fafc", border: "1px solid #e2e8f0", color: "#94a3b8", fontFamily: "inherit" }}>
+              🔒 보기 전용 · 탭하여 잠금해제
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Grand Total */}
