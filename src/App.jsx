@@ -107,6 +107,16 @@ export default function App() {
     return { 1: true, 2: true };
   });
 
+  const [calcMode, setCalcMode] = useState(() => {
+    try { const s = localStorage.getItem("maps_calc_mode"); if (s) return s; } catch (e) {}
+    return "합산"; // "합산" | "개별"
+  });
+  const toggleCalcMode = () => {
+    const next = calcMode === "합산" ? "개별" : "합산";
+    setCalcMode(next);
+    try { localStorage.setItem("maps_calc_mode", next); } catch (e) {}
+  };
+
   const toggleMachineEnabled = (m) => {
     const next = { ...enabledMachines, [m]: !enabledMachines[m] };
     setEnabledMachines(next);
@@ -181,17 +191,18 @@ export default function App() {
 
   const stats = useMemo(() => {
     const out = {};
+    const activeMachines = MACHINES.filter(m => enabledMachines[m]);
     ZONES.forEach(z => {
       let flowDone = 0, shelfDone = 0;
-      const total = MACHINES.reduce((s, m) => s + MACHINE_LINES[m].length * 8, 0);
-      MACHINES.forEach(m => MACHINE_LINES[m].forEach(({ line }) => {
-        flowDone += data[z][m][line].flow.filter(v=>v).length;
-        shelfDone += data[z][m][line].shelf.filter(v=>v).length;
+      const total = activeMachines.reduce((s, m) => s + MACHINE_LINES[m].length * 8, 0) || 1;
+      activeMachines.forEach(m => MACHINE_LINES[m].forEach(({ line }) => {
+        flowDone += (data[z][m][line].flow||[]).filter(v=>v).length;
+        shelfDone += (data[z][m][line].shelf||[]).filter(v=>v).length;
       }));
       out[z] = { flowDone, shelfDone, total, flowPct: Math.round((flowDone/total)*100), shelfPct: Math.round((shelfDone/total)*100), pct: Math.round(((flowDone+shelfDone)/(total*2))*100) };
     });
     return out;
-  }, [data]);
+  }, [data, enabledMachines]);
 
   const machineTotals = useMemo(() => {
     const out = {};
@@ -223,11 +234,39 @@ export default function App() {
   }, []);
 
   const grand = useMemo(() => {
-    const total = ZONES.length * MACHINES.reduce((s,m) => s + MACHINE_LINES[m].length * 8, 0);
-    const flowDone = ZONES.reduce((s,z) => s+stats[z].flowDone, 0);
-    const shelfDone = ZONES.reduce((s,z) => s+stats[z].shelfDone, 0);
-    return { flowDone, shelfDone, total, flowPct: Math.round((flowDone/total)*100), shelfPct: Math.round((shelfDone/total)*100), pct: Math.round(((flowDone+shelfDone)/(total*2))*100) };
-  }, [stats]);
+    const activeMachines = MACHINES.filter(m => enabledMachines[m]);
+    if (calcMode === "개별") {
+      const machineStats = {};
+      activeMachines.forEach(m => {
+        let fDone = 0, sDone = 0;
+        const total = ZONES.length * MACHINE_LINES[m].length * 8;
+        ZONES.forEach(z => {
+          MACHINE_LINES[m].forEach(({line}) => {
+            fDone += (data[z][m][line].flow||[]).filter(v=>v).length;
+            sDone += (data[z][m][line].shelf||[]).filter(v=>v).length;
+          });
+        });
+        machineStats[m] = {
+          flowPct: Math.round((fDone/total)*100),
+          shelfPct: Math.round((sDone/total)*100),
+          pct: Math.round(((fDone+sDone)/(total*2))*100),
+        };
+      });
+      const avgPct = Math.round(Object.values(machineStats).reduce((s,m)=>s+m.pct,0)/Object.keys(machineStats).length);
+      return { machineStats, pct: avgPct };
+    }
+    const total = ZONES.length * activeMachines.reduce((s,m) => s + MACHINE_LINES[m].length * 8, 0) || 1;
+    let flowDone = 0, shelfDone = 0;
+    ZONES.forEach(z => {
+      activeMachines.forEach(m => {
+        MACHINE_LINES[m].forEach(({line}) => {
+          flowDone += (data[z][m][line].flow||[]).filter(v=>v).length;
+          shelfDone += (data[z][m][line].shelf||[]).filter(v=>v).length;
+        });
+      });
+    });
+    return { flowDone, shelfDone, total, flowPct: Math.round((flowDone/total)*100), shelfPct: Math.round((shelfDone/total)*100), pct: Math.round(((flowDone+shelfDone)/(total*2))*100), machineStats: null };
+  }, [stats, enabledMachines, data, calcMode]);
 
   // 대시보드용 요약 실시간 전송
   useEffect(() => {
@@ -430,11 +469,11 @@ export default function App() {
           const shelfBul = shelfAll && !shelfPicking;
           return (
             <div style={{ display:"flex", gap:8, marginBottom:12 }}>
-              <button onClick={() => togglePicking(activeZone, activeMachine, activeLine, "flow")} style={{ flex:1, fontSize:11, fontWeight:800, padding:"8px 0", borderRadius:9, cursor:"pointer", transition:"all 0.15s", background:flowBul?"#dcfce7":flowPicking?"#fef9c3":"#f8fafc", border:`1.5px solid ${flowBul?"#86efac":flowPicking?"#fde047":"#e2e8f0"}`, color:flowBul?"#15803d":flowPicking?"#a16207":"#94a3b8", fontFamily:"inherit" }}>
-                {flowBul ? "✓ 플 불출완료" : flowPicking ? "✓ 플 피킹완료" : "플로우 피킹완료"}
+              <button onClick={() => togglePicking(activeZone, activeMachine, activeLine, "flow")} style={{ flex:1, fontSize:11, fontWeight:800, padding:"8px 0", borderRadius:9, cursor:"pointer", transition:"all 0.15s", background:flowPicking?"#dcfce7":"#f8fafc", border:`1.5px solid ${flowPicking?"#86efac":"#e2e8f0"}`, color:flowPicking?"#15803d":"#94a3b8", fontFamily:"inherit" }}>
+                {flowPicking ? "✓ 플 피킹완료" : "플로우 피킹완료"}
               </button>
-              <button onClick={() => togglePicking(activeZone, activeMachine, activeLine, "shelf")} style={{ flex:1, fontSize:11, fontWeight:800, padding:"8px 0", borderRadius:9, cursor:"pointer", transition:"all 0.15s", background:shelfBul?"#dcfce7":shelfPicking?"#fef9c3":"#f8fafc", border:`1.5px solid ${shelfBul?"#86efac":shelfPicking?"#fde047":"#e2e8f0"}`, color:shelfBul?"#15803d":shelfPicking?"#a16207":"#94a3b8", fontFamily:"inherit" }}>
-                {shelfBul ? "✓ 선 불출완료" : shelfPicking ? "✓ 선 피킹완료" : "선반 피킹완료"}
+              <button onClick={() => togglePicking(activeZone, activeMachine, activeLine, "shelf")} style={{ flex:1, fontSize:11, fontWeight:800, padding:"8px 0", borderRadius:9, cursor:"pointer", transition:"all 0.15s", background:shelfPicking?"#dcfce7":"#f8fafc", border:`1.5px solid ${shelfPicking?"#86efac":"#e2e8f0"}`, color:shelfPicking?"#15803d":"#94a3b8", fontFamily:"inherit" }}>
+                {shelfPicking ? "✓ 선 피킹완료" : "선반 피킹완료"}
               </button>
             </div>
           );
@@ -487,6 +526,9 @@ export default function App() {
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12 }}>
           <div style={{ fontSize:13, fontWeight:700, color:S.text }}>존별 요약</div>
           <div style={{ display:"flex", gap:6 }}>
+            <button onClick={toggleCalcMode} style={{ fontSize:10, fontWeight:800, padding:"4px 10px", borderRadius:8, cursor:"pointer", background:calcMode==="개별"?"#0f172a":"#f8fafc", border:"1px solid #e2e8f0", color:calcMode==="개별"?"#fff":"#64748b", fontFamily:"inherit", transition:"all 0.15s" }}>
+              {calcMode}
+            </button>
             {MACHINES.map(m => (
               <button key={m} onClick={() => toggleMachineEnabled(m)} style={{
                 fontSize:10, fontWeight:800, padding:"4px 12px", borderRadius:8, cursor:"pointer",
