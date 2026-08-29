@@ -19,10 +19,10 @@ const dbSet = (p, val) => { try { if (fdb) set(ref(fdb, p), val); } catch (e) {}
 
 const EDIT_PASSWORD = "006"; // 수정 비밀번호
 
-const ZONES = ["상부", "하부", "B", "C", "D", "P", "T", "W", "Z"];
+const ZONES = ["상부", "하부", "B", "C", "D", "P/Z", "T", "W", "V"];
 const ZONE_COLORS = {
   "상부": "#7c3aed", "하부": "#2563eb", "B": "#ea580c", "C": "#0891b2",
-  "D": "#dc2626", "P": "#059669", "T": "#db2777", "W": "#65a30d", "Z": "#d97706",
+  "D": "#dc2626", "P/Z": "#059669", "T": "#db2777", "W": "#65a30d", "V": "#6366f1",
 };
 
 // 호기별 라인 구성
@@ -49,7 +49,13 @@ try {
 const initData = () => {
   try {
     const saved = localStorage.getItem("maps_data");
-    if (saved) return JSON.parse(saved);
+    if (saved) {
+      const d = JSON.parse(saved);
+      if (d["P"] !== undefined && d["P/Z"] === undefined) { d["P/Z"] = d["P"]; delete d["P"]; }
+      if (d["Z"] !== undefined && d["V"] === undefined) { d["V"] = d["Z"]; delete d["Z"]; }
+      if (d["P/Z"] && d["P/Z"].giftPicking === undefined) d["P/Z"].giftPicking = false;
+      return d;
+    }
   } catch (e) {}
   const d = {};
   ZONES.forEach(z => {
@@ -60,6 +66,7 @@ const initData = () => {
         d[z][m][line] = { flow: Array(8).fill(false), shelf: Array(8).fill(false), flowPicking: false, shelfPicking: false };
       });
     });
+    if (z === "P/Z") d[z].giftPicking = false;
   });
   return d;
 };
@@ -358,6 +365,9 @@ export default function App() {
     });
 
     lines.push(`──────────────`, `토탈 ${grand.pct}%`);
+    // 증정 피킹 상태
+    if (data["P/Z"] && data["P/Z"].giftPicking) lines.push(`🎁 증정 피킹완료`);
+    else if (data["P/Z"]) lines.push(`🎁 증정 피킹 미완료`);
     return lines.join("\n");
   };
 
@@ -519,6 +529,25 @@ export default function App() {
             <span style={{ fontSize:12, color:"#d97706", fontWeight:700 }}>선 {data[activeZone][activeMachine][activeLine].shelf.filter(v=>v).length}/8</span>
           </div>
         </div>
+
+        {/* 증정 피킹 버튼 - P/Z 존에서만 표시 */}
+        {activeZone === "P/Z" && (
+          <div style={{ marginTop:10 }}>
+            <div style={{ fontSize:11, color:S.textSub, marginBottom:6, fontWeight:600 }}>🎁 증정 피킹</div>
+            <button onClick={() => {
+              const newGift = !(data["P/Z"].giftPicking || false);
+              saveData({ ...data, "P/Z": { ...data["P/Z"], giftPicking: newGift } });
+            }} style={{
+              width:"100%", fontSize:12, fontWeight:800, padding:"10px 0", borderRadius:10,
+              cursor:"pointer", transition:"all 0.15s", fontFamily:"inherit",
+              background: (data["P/Z"].giftPicking) ? "#dcfce7" : "#f8fafc",
+              border: `1.5px solid ${(data["P/Z"].giftPicking) ? "#86efac" : "#e2e8f0"}`,
+              color: (data["P/Z"].giftPicking) ? "#15803d" : "#94a3b8",
+            }}>
+              {(data["P/Z"].giftPicking) ? "✓ 증정 피킹완료" : "증정 피킹완료"}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* 존별 요약 */}
