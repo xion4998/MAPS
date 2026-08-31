@@ -143,8 +143,7 @@ export default function App() {
   };
   const [resetConfirm, setResetConfirm] = useState(false);
 
-  const saveData = (d, zone, machine, line) => { if (!editable) return; setData(d); try { localStorage.setItem("maps_data", JSON.stringify(d)); } catch (e) {}
-    if (zone && machine && line && d[zone] && d[zone][machine]) { dbSet(`maps/data/${zone}/${machine}/${line}`, d[zone][machine][line]); } else { dbSet("maps/data", d); } };
+  const saveData = (d) => { if (!editable) return; setData(d); try { localStorage.setItem("maps_data", JSON.stringify(d)); } catch (e) {} dbSet("maps/data", d); };
 
   const toggleNum = (zone, machine, line, type, idx) => {
     const current = data[zone][machine][line][type];
