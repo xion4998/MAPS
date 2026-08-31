@@ -73,18 +73,6 @@ const initData = () => {
 
 function CircleProgress({ percent, color, size = 80 }) {
   const r = (size - 8) / 2, circ = 2 * Math.PI * r, dash = (percent / 100) * circ;
-  if (loading) {
-    return (
-      <div style={{ minHeight:"100vh", background:"#f0f4f8", display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'Pretendard','Apple SD Gothic Neo',sans-serif", fontSize:16, color:"#64748b" }}>
-        불러오는 중...
-      </div>
-    );
-  } }`}</style>
-        <div style={{ marginTop:16, fontSize:13, color:"#64748b" }}>데이터 불러오는 중...</div>
-      </div>
-    );
-  }
-
   return (
     <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
       <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#e2e8f0" strokeWidth={5} />
@@ -95,7 +83,6 @@ function CircleProgress({ percent, color, size = 80 }) {
 }
 
 export default function App() {
-  const [loading, setLoading] = useState(true);
   const [data, setData] = useState(initData);
   const [activeZone, setActiveZone] = useState(ZONES[0]);
   const [activeMachine, setActiveMachine] = useState(1);
@@ -249,10 +236,8 @@ export default function App() {
         setData(v);
         try { localStorage.setItem("maps_data", JSON.stringify(v)); } catch (e) {}
       }
-      setLoading(false);
     }));
-    const timeout = setTimeout(() => setLoading(false), 3000);
-    return () => { subs.forEach(u => u()); clearTimeout(timeout); };
+    return () => subs.forEach(u => u());
   }, []);
 
   const grand = useMemo(() => {
