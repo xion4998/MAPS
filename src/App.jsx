@@ -73,6 +73,17 @@ const initData = () => {
 
 function CircleProgress({ percent, color, size = 80 }) {
   const r = (size - 8) / 2, circ = 2 * Math.PI * r, dash = (percent / 100) * circ;
+  if (loading) {
+    return (
+      <div style={{ minHeight:"100vh", background:"#f0f4f8", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", fontFamily:"'Pretendard','Apple SD Gothic Neo',sans-serif" }}>
+        <div style={{ fontSize:28, fontWeight:900, background:"linear-gradient(135deg,#f59e0b,#ef4444)", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", marginBottom:16 }}>MAPS</div>
+        <div style={{ width:40, height:40, border:"4px solid #e2e8f0", borderTop:"4px solid #f59e0b", borderRadius:"50%", animation:"spin 0.8s linear infinite" }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        <div style={{ marginTop:16, fontSize:13, color:"#64748b" }}>데이터 불러오는 중...</div>
+      </div>
+    );
+  }
+
   return (
     <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
       <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#e2e8f0" strokeWidth={5} />
@@ -83,6 +94,7 @@ function CircleProgress({ percent, color, size = 80 }) {
 }
 
 export default function App() {
+  const [loading, setLoading] = useState(true);
   const [data, setData] = useState(initData);
   const [activeZone, setActiveZone] = useState(ZONES[0]);
   const [activeMachine, setActiveMachine] = useState(1);
@@ -131,7 +143,8 @@ export default function App() {
   };
   const [resetConfirm, setResetConfirm] = useState(false);
 
-  const saveData = (d) => { if (!editable) return; setData(d); try { localStorage.setItem("maps_data", JSON.stringify(d)); } catch (e) {} dbSet("maps/data", d); };
+  const saveData = (d, zone, machine, line) => { if (!editable) return; setData(d); try { localStorage.setItem("maps_data", JSON.stringify(d)); } catch (e) {}
+    if (zone && machine && line && d[zone] && d[zone][machine]) { dbSet(`maps/data/${zone}/${machine}/${line}`, d[zone][machine][line]); } else { dbSet("maps/data", d); } };
 
   const toggleNum = (zone, machine, line, type, idx) => {
     const current = data[zone][machine][line][type];
@@ -236,8 +249,10 @@ export default function App() {
         setData(v);
         try { localStorage.setItem("maps_data", JSON.stringify(v)); } catch (e) {}
       }
+      setLoading(false);
     }));
-    return () => subs.forEach(u => u());
+    const timeout = setTimeout(() => setLoading(false), 3000);
+    return () => { subs.forEach(u => u()); clearTimeout(timeout); };
   }, []);
 
   const grand = useMemo(() => {
