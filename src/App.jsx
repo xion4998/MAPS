@@ -149,13 +149,13 @@ export default function App() {
     if (!isEditable) return; setData(d); try { localStorage.setItem("maps_data", JSON.stringify(d)); } catch (e) {} dbSet("maps/data", d); };
 
   const toggleNum = (zone, machine, line, type, idx) => {
-    const current = data[zone][machine][line][type];
+    const current = ((data[zone]||{})[machine]||{})[line][type];
     const allChecked = current.slice(0, idx + 1).every(v => v);
     const newArr = [...current];
     if (allChecked) { for (let i = idx; i < 8; i++) newArr[i] = false; }
     else { for (let i = 0; i <= idx; i++) newArr[i] = true; }
 
-    const newMachineData = { ...data[zone][machine], [line]: { ...data[zone][machine][line], [type]: newArr } };
+    const newMachineData = { ...((data[zone]||{})[machine]||{}), [line]: { ...((data[zone]||{})[machine]||{})[line], [type]: newArr } };
 
     // 뒤 라인 체크되면 앞 라인 자동 완료
     if (!allChecked) {
@@ -172,9 +172,9 @@ export default function App() {
 
   const togglePicking = (zone, machine, line, type) => {
     const pickKey = type === "flow" ? "flowPicking" : "shelfPicking";
-    const cur = data[zone][machine][line];
+    const cur = ((data[zone]||{})[machine]||{})[line];
     const newVal = !(cur[pickKey] || false);
-    const newMachineData = { ...data[zone][machine], [line]: { 
+    const newMachineData = { ...((data[zone]||{})[machine]||{}), [line]: { 
       ...cur, 
       [pickKey]: newVal,
       // 피킹완료 시 해당 타입 전체 체크, 해제 시 그대로 유지
@@ -218,8 +218,8 @@ export default function App() {
       let flowDone = 0, shelfDone = 0;
       const total = activeMachines.reduce((s, m) => s + MACHINE_LINES[m].length * 8, 0) || 1;
       activeMachines.forEach(m => MACHINE_LINES[m].forEach(({ line }) => {
-        flowDone += (data[z][m][line].flow||[]).filter(v=>v).length;
-        shelfDone += (data[z][m][line].shelf||[]).filter(v=>v).length;
+        flowDone += (((data[z]||{})[m]||{})[line].flow||[]).filter(v=>v).length;
+        shelfDone += (((data[z]||{})[m]||{})[line].shelf||[]).filter(v=>v).length;
       }));
       out[z] = { flowDone, shelfDone, total, flowPct: Math.round((flowDone/total)*100), shelfPct: Math.round((shelfDone/total)*100), pct: Math.round(((flowDone+shelfDone)/(total*2))*100) };
     });
@@ -231,8 +231,8 @@ export default function App() {
     MACHINES.forEach(m => {
       let flowDone = 0, shelfDone = 0;
       ZONES.forEach(z => MACHINE_LINES[m].forEach(({ line }) => {
-        flowDone += data[z][m][line].flow.filter(v=>v).length;
-        shelfDone += data[z][m][line].shelf.filter(v=>v).length;
+        flowDone += ((data[z]||{})[m]||{})[line].flow.filter(v=>v).length;
+        shelfDone += ((data[z]||{})[m]||{})[line].shelf.filter(v=>v).length;
       }));
       const total = ZONES.length * MACHINE_LINES[m].length * 8;
       out[m] = { flowPct: Math.round((flowDone/total)*100), shelfPct: Math.round((shelfDone/total)*100) };
@@ -264,8 +264,8 @@ export default function App() {
         const total = ZONES.length * MACHINE_LINES[m].length * 8;
         ZONES.forEach(z => {
           MACHINE_LINES[m].forEach(({line}) => {
-            fDone += (data[z][m][line].flow||[]).filter(v=>v).length;
-            sDone += (data[z][m][line].shelf||[]).filter(v=>v).length;
+            fDone += (((data[z]||{})[m]||{})[line].flow||[]).filter(v=>v).length;
+            sDone += (((data[z]||{})[m]||{})[line].shelf||[]).filter(v=>v).length;
           });
         });
         machineStats[m] = {
@@ -282,8 +282,8 @@ export default function App() {
     ZONES.forEach(z => {
       activeMachines.forEach(m => {
         MACHINE_LINES[m].forEach(({line}) => {
-          flowDone += (data[z][m][line].flow||[]).filter(v=>v).length;
-          shelfDone += (data[z][m][line].shelf||[]).filter(v=>v).length;
+          flowDone += (((data[z]||{})[m]||{})[line].flow||[]).filter(v=>v).length;
+          shelfDone += (((data[z]||{})[m]||{})[line].shelf||[]).filter(v=>v).length;
         });
       });
     });
@@ -317,18 +317,18 @@ export default function App() {
         let flowDone = 0, shelfDone = 0, flowTotal = 0, shelfTotal = 0;
         let flowPicking = false, shelfPicking = false;
         MACHINE_LINES[m].forEach(({ line, numbers }) => {
-          flowDone += data[z][m][line].flow.filter(v=>v).length;
-          shelfDone += data[z][m][line].shelf.filter(v=>v).length;
+          flowDone += ((data[z]||{})[m]||{})[line].flow.filter(v=>v).length;
+          shelfDone += ((data[z]||{})[m]||{})[line].shelf.filter(v=>v).length;
           flowTotal += 8; shelfTotal += 8;
-          if (data[z][m][line].flowPicking) flowPicking = true;
-          if (data[z][m][line].shelfPicking) shelfPicking = true;
+          if (((data[z]||{})[m]||{})[line].flowPicking) flowPicking = true;
+          if (((data[z]||{})[m]||{})[line].shelfPicking) shelfPicking = true;
         });
         const flowAll = flowDone === flowTotal;
         const shelfAll = shelfDone === shelfTotal;
         const lastFlowNum = (() => {
           for (let li = MACHINE_LINES[m].length - 1; li >= 0; li--) {
             const { line, numbers } = MACHINE_LINES[m][li];
-            const cnt = data[z][m][line].flow.filter(v=>v).length;
+            const cnt = ((data[z]||{})[m]||{})[line].flow.filter(v=>v).length;
             if (cnt > 0) return numbers[cnt - 1];
           }
           return null;
@@ -336,7 +336,7 @@ export default function App() {
         const lastShelfNum = (() => {
           for (let li = MACHINE_LINES[m].length - 1; li >= 0; li--) {
             const { line, numbers } = MACHINE_LINES[m][li];
-            const cnt = data[z][m][line].shelf.filter(v=>v).length;
+            const cnt = ((data[z]||{})[m]||{})[line].shelf.filter(v=>v).length;
             if (cnt > 0) return numbers[cnt - 1];
           }
           return null;
