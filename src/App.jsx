@@ -141,12 +141,8 @@ export default function App() {
   };
   const [resetConfirm, setResetConfirm] = useState(false);
 
-  const editableRef = useRef(editable);
-  useEffect(() => { editableRef.current = editable; }, [editable]);
-
   const saveData = (d, changedZone) => {
-    const isEditable = editable || (typeof localStorage !== "undefined" && localStorage.getItem("maps_editable") === "true");
-    if (!isEditable) return;
+    if (!editable) return;
     setData(d);
     try { localStorage.setItem("maps_data", JSON.stringify(d)); } catch (e) {}
     if (changedZone && d[changedZone]) {
