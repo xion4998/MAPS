@@ -83,6 +83,26 @@ const initData = () => {
 
 function CircleProgress({ percent, color, size = 80 }) {
   const r = (size - 8) / 2, circ = 2 * Math.PI * r, dash = (percent / 100) * circ;
+  // Safari 감지 → Chrome 유도
+  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  if (isSafari && isIOS) {
+    const url = window.location.href;
+    const chromeUrl = "googlechrome://" + url.replace(/^https?:\/\//, "");
+    return (
+      <div style={{ minHeight:"100vh", background:"#f0f4f8", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:24, fontFamily:"'Apple SD Gothic Neo',sans-serif", textAlign:"center" }}>
+        <div style={{ fontSize:40, marginBottom:16 }}>🌐</div>
+        <div style={{ fontSize:18, fontWeight:800, color:"#0f172a", marginBottom:8 }}>Chrome으로 열어주세요</div>
+        <div style={{ fontSize:14, color:"#64748b", marginBottom:24, lineHeight:1.6 }}>이 앱은 Safari에서 일부 기능이 작동하지 않아요.<br/>Chrome으로 열면 정상 작동합니다.</div>
+        <a href={chromeUrl} style={{ background:"#4285f4", color:"#fff", borderRadius:12, padding:"12px 24px", fontSize:15, fontWeight:700, textDecoration:"none", display:"block", marginBottom:12 }}>
+          Chrome으로 열기
+        </a>
+        <div style={{ fontSize:12, color:"#94a3b8" }}>Chrome이 설치되어 있어야 합니다</div>
+      </div>
+    );
+  }
+
+
   return (
     <svg width={size} height={size} style={{ transform: "rotate(-90deg)" }}>
       <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#e2e8f0" strokeWidth={5} />
