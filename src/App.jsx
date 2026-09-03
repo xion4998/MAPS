@@ -144,9 +144,18 @@ export default function App() {
   const editableRef = useRef(editable);
   useEffect(() => { editableRef.current = editable; }, [editable]);
 
-  const saveData = (d) => {
+  const saveData = (d, changedZone) => {
     const isEditable = editable || (typeof localStorage !== "undefined" && localStorage.getItem("maps_editable") === "true");
-    if (!isEditable) return; setData(d); try { localStorage.setItem("maps_data", JSON.stringify(d)); } catch (e) {} dbSet("maps/data", d); };
+    if (!isEditable) return;
+    setData(d);
+    try { localStorage.setItem("maps_data", JSON.stringify(d)); } catch (e) {}
+    if (changedZone && d[changedZone]) {
+      const fbKey = changedZone.replace(/\//g, "_");
+      dbSet(`maps/data/${fbKey}`, d[changedZone]);
+    } else {
+      ZONES.forEach(z => { if (d[z]) { const fbKey = z.replace(/\//g, "_"); dbSet(`maps/data/${fbKey}`, d[z]); } });
+    }
+  };
 
   const toggleNum = (zone, machine, line, type, idx) => {
     const current = ((data[zone]||{})[machine]||{})[line][type];
@@ -167,7 +176,7 @@ export default function App() {
       }
     }
 
-    saveData({ ...data, [zone]: { ...data[zone], [machine]: newMachineData } });
+    saveData({ ...data, [zone]: { ...data[zone], [machine]: newMachineData } }, zone);
   };
 
   const togglePicking = (zone, machine, line, type) => {
@@ -195,7 +204,7 @@ export default function App() {
       }
     }
 
-    saveData({ ...data, [zone]: { ...data[zone], [machine]: newMachineData } });
+    saveData({ ...data, [zone]: { ...data[zone], [machine]: newMachineData } }, zone);
   };
 
   const resetAll = () => {
