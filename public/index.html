@@ -1,13 +1,1 @@
-<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>MAPS</title><script>
-(function() {
-  var ua = navigator.userAgent;
-  var isSafari = /^((?!chrome|android).)*safari/i.test(ua);
-  var isIOS = /iPad|iPhone|iPod/.test(ua);
-  if (isSafari && isIOS) {
-    document.addEventListener("DOMContentLoaded", function() {
-      var url = window.location.href.replace(/^https?:\/\//, "");
-      document.body.innerHTML = '<div style="min-height:100vh;background:#f0f4f8;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;font-family:sans-serif;text-align:center"><div style="font-size:40px;margin-bottom:16px">🌐</div><div style="font-size:18px;font-weight:800;margin-bottom:8px">Chrome으로 열어주세요</div><div style="font-size:14px;color:#64748b;margin-bottom:24px;line-height:1.6">이 앱은 Safari에서 일부 기능이 작동하지 않아요.<br>Chrome으로 열면 정상 작동합니다.</div><a href="googlechrome://' + url + '" style="background:#4285f4;color:#fff;border-radius:12px;padding:12px 24px;font-size:15px;font-weight:700;text-decoration:none;display:block;margin-bottom:12px">Chrome으로 열기</a><div style="font-size:12px;color:#94a3b8">Chrome이 설치되어 있어야 합니다</div></div>';
-    });
-  }
-})();
-</script></head><body><div id="root"></div></body></html>
+<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/><title>MAPS</title></head><body><div id="root"></div></body></html>
