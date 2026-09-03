@@ -146,10 +146,10 @@ export default function App() {
     setData(d);
     try { localStorage.setItem("maps_data", JSON.stringify(d)); } catch (e) {}
     if (changedZone && d[changedZone]) {
-      const fbKey = changedZone.replace(/\//g, "_");
+      const fbKey = changedZone.split("/").join("_");
       dbSet(`maps/data/${fbKey}`, d[changedZone]);
     } else {
-      ZONES.forEach(z => { if (d[z]) { const fbKey = z.replace(/\//g, "_"); dbSet(`maps/data/${fbKey}`, d[z]); } });
+      ZONES.forEach(z => { if (d[z]) { const fbKey = z.split("/").join("_"); dbSet(`maps/data/${fbKey}`, d[z]); } });
     }
   };
 
@@ -253,7 +253,7 @@ export default function App() {
     if (!fdb) return;
     const subs = [];
     ZONES.forEach(z => {
-      const fbKey = z.replace(/\//g, "_");
+      const fbKey = z.split("/").join("_");
       subs.push(onValue(ref(fdb, `maps/data/${fbKey}`), snap => {
         const v = snap.val();
         if (v) {
