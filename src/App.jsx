@@ -252,21 +252,16 @@ export default function App() {
   useEffect(() => {
     if (!fdb) return;
     const subs = [];
-    ZONES.forEach(z => {
-      const fbKey = z.split("/").join("_");
-      subs.push(onValue(ref(fdb, "maps/data/" + fbKey), snap => {
-        const v = snap.val();
-        if (v) {
-          isWritingRef.current = true;
-          setData(prev => ({ ...prev, [z]: v }));
-          try {
-            const saved = localStorage.getItem("maps_data");
-            const cur = saved ? JSON.parse(saved) : {};
-            localStorage.setItem("maps_data", JSON.stringify({ ...cur, [z]: v }));
-          } catch (e) {}
-        }
-      }));
-    });
+    subs.push(onValue(ref(fdb, "maps/data"), snap => {
+      const v = snap.val();
+      if (v) {
+        const converted = {};
+        Object.keys(v).forEach(k => { converted[k.split("_").join("/")] = v[k]; });
+        isWritingRef.current = true;
+        setData(converted);
+        try { localStorage.setItem("maps_data", JSON.stringify(converted)); } catch (e) {}
+      }
+    }));
     return () => subs.forEach(u => u());
   }, []);
 
