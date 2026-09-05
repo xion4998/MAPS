@@ -243,7 +243,7 @@ export default function App() {
       out[m] = { flowPct: Math.round((flowDone/total)*100), shelfPct: Math.round((shelfDone/total)*100) };
     });
     return out;
-  }, [data]);
+  }, [stats]);
 
 
   const isWritingRef = useRef(false);
@@ -298,7 +298,7 @@ export default function App() {
       });
     });
     return { flowDone, shelfDone, total, flowPct: Math.round((flowDone/total)*100), shelfPct: Math.round((shelfDone/total)*100), pct: Math.round(((flowDone+shelfDone)/(total*2))*100), machineStats: null };
-  }, [stats, enabledMachines, data, calcMode]);
+  }, [stats, enabledMachines, calcMode]);
 
   // 대시보드용 요약 실시간 전송
   
